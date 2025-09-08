@@ -1,0 +1,201 @@
+module Quad_Mux2x1(EN, A, B, Selection, Y);
+	input EN;
+	input [3:0] A, B;
+	input Selection;
+	output reg [3:0] Y;
+	
+	always @ (EN, A, B, Selection)
+		begin
+			if(EN==0)
+				begin
+				if(Selection==0)
+					Y=A;
+				else
+					Y=B;
+				end
+			else
+				Y=0;
+		end
+endmodule 
+////////////////////////////////////////////////////////////////////////////////////
+
+module Decoder2x4(I0, I1, EN, Y);
+	input I0, I1, EN;
+	output reg [3:0] Y;
+	
+	always @ (I0, I1, EN)
+		begin
+			if(EN==0)
+				begin  
+					case({I1,I0})
+						2'b00 : Y=4'b1110;
+						2'b01 : Y=4'b1101;
+						2'b10 : Y=4'b1011;
+						2'b11 : Y=4'b0111;
+					endcase	 
+				end	
+			else
+				Y=4'b1111;
+		end
+endmodule  
+////////////////////////////////////////////////////////////////////////////////////
+
+module BCD_7Segment_driver(A, B, C, D, a, b, c, d, e, f, g);
+	input A, B, C, D;
+	output reg a, b, c, d, e, f, g;
+	
+	always @ (A, B, C, D)
+		begin
+			case({A, B, C, D})
+				4'b0000 : {a,b,c,d,e,f,g}=7'b1111110;
+				4'b0001 : {a,b,c,d,e,f,g}=7'b0110000;
+				4'b0010 : {a,b,c,d,e,f,g}=7'b1101101;
+				4'b0011 : {a,b,c,d,e,f,g}=7'b1111001;
+				4'b0100 : {a,b,c,d,e,f,g}=7'b0110011;
+				4'b0101 : {a,b,c,d,e,f,g}=7'b1011011;
+				4'b0110 : {a,b,c,d,e,f,g}=7'b1011111;
+				4'b0111 : {a,b,c,d,e,f,g}=7'b1110000;
+				4'b1000 : {a,b,c,d,e,f,g}=7'b1111111;	  
+				4'b1001 : {a,b,c,d,e,f,g}=7'b1111011;
+				default : {a,b,c,d,e,f,g}=7'b0000000;
+			endcase		  
+		end
+endmodule
+////////////////////////////////////////////////////////////////////////////////////
+
+module tb_segment7;
+	
+    reg A, B, C, D;
+    wire a, b, c, d, e, f, g;
+    integer i;
+
+    BCD_7Segment_driver unit(A, B, C, D, a, b, c, d, e, f, g);	
+	
+	initial begin	 
+		$monitor("Time %0d number=%b%b%b%b  BCDNumber=%b%b%b%b%b%b%b",$time,A,B,C,D,a, b, c, d, e, f, g);
+		#0 {A, B, C, D} = 0;
+        for(i = 0;i < 16;i = i+1)
+        begin		   
+            {A, B, C, D} = i; 
+            #10;
+        end     
+    end
+      
+endmodule
+//////////////////////////////////////////////////////////////////////////////////// 
+
+module tb_decoder;
+	
+    reg I0, I1, EN;
+    wire [3:0] Y;
+
+    Decoder2x4 unit (I0, I1, EN, Y);	
+	
+	initial begin	 
+		$monitor("Time %0d  EN=%b  I0=%b  I1=%b  decodingNumber=%b",$time, EN, I0, I1, Y);
+		#0 I0=0; I1=0; EN=1;
+		#10 I0=1; I1=0;
+		#10 I0=1; I1=1;	  
+		
+		#10 I0=0; I1=0; EN=0;
+		#10 I0=0; I1=1;
+		#10 I0=1; I1=0;
+		#10 I0=1; I1=1;
+		
+    end
+      
+endmodule
+////////////////////////////////////////////////////////////////////////////////////
+
+module tb_mux;
+	
+    reg EN, Selection;
+	reg [3:0] A, B;
+    wire [3:0] Y;  
+	integer i;
+
+    Quad_Mux2x1 unit (EN, A, B, Selection, Y);	
+	
+	initial begin	 
+		$monitor("Time %0d  EN=%b  A=%b  B=%b  Selection=%b  Y=%b",$time, EN, A, B, Selection, Y);
+		#0 A=4'b0011; B=4'b1100; Selection=0; EN=1;
+		#10 A=4'b0111; B=4'b0001;
+		#10 EN=0; B=4'b0000;
+		
+		for(i=0; i<16; i=i+1)
+			begin
+				A=i;   
+				#5;
+			end	
+		
+		#10 Selection=1; A=4'b0000;	
+			
+		for(i=0; i<16; i=i+1)
+			begin
+				B=i;   
+				#5;
+			end	
+    end
+      
+endmodule
+////////////////////////////////////////////////////////////////////////////////////   
+
+module fullCircuit(A, B, G1, a, b, c, d, e, f, g, Y);
+	input [3:0] A, B;
+	input G1;
+	output a, b, c, d, e, f, g;
+	output [3:0] Y;
+	
+	wire [3:0] w;
+	
+	Quad_Mux2x1 unit1 (1'b0, A, B, G1, w);
+
+	Decoder2x4 unit5 (G1, 1'b0, 1'b0, Y); 
+	
+	BCD_7Segment_driver unit6(w[3], w[2], w[1], w[0], a, b, c, d, e, f, g);
+	
+endmodule
+////////////////////////////////////////////////////////////////////////////////////   
+
+module tb_fullCircuit;
+	
+    reg [3:0] A, B;
+	reg G1;
+    wire a, b, c, d, e, f, g;  
+	wire [3:0] Y;	 
+	integer i;
+
+    fullCircuit unit (A, B, G1, a, b, c, d, e, f, g, Y);	
+	
+	initial begin
+		$display("-----------------------PROGRAM-----------------------");	
+		$display(" ");
+		
+		$monitor("Time %0d  A=%b  B=%b  G1=%b  LSD(Y0)=%b  MSD(Y1)=%b  Number=%b%b%b%b%b%b%b",$time, A, B, G1, Y[0], Y[1], a, b, c, d, e, f, g);
+		#0 A=4'b0000; B=4'b0000; G1=0;	
+		
+		for(i=0; i<16; i=i+1)
+			begin
+				A=i;   
+				#5;
+			end	
+			
+	    #5 A=4'b0000; G1=1;
+		
+		$display(" ");
+		$display("----------------------------------------------------------------");
+		$display(" ");
+		
+		for(i=0; i<16; i=i+1)
+			begin
+				B=i;
+				#5;
+			end	
+			
+		$display(" ");
+		$display("-----------------------END OF PROGRAM-----------------------");
+		
+    end
+      
+endmodule
+////////////////////////////////////////////////////////////////////////////////////   

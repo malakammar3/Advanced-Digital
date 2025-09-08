@@ -1,0 +1,275 @@
+module stateDiagram(X, CLK, RST, Z);
+	input X, CLK, RST;
+	output reg Z; 
+	reg [1:0] state;
+	
+	parameter S0=2'b00, S1=2'b01, S2=2'b11, S3=2'b10;
+	
+	
+	always@ (posedge CLK or  negedge RST)  
+		
+		if(~RST)
+			state=S0;
+		
+		else 
+			case(state)
+				S0 : if(X)
+					 	state=S1;
+					 else 
+						state=S3;
+				S1 : if(X)
+					    state=S2;
+					 else
+						state=S0; 
+				S2 : if(X)
+					 	state=S2;
+					 else
+						state=S1;
+				S3 : if(X)
+						state=S1;
+					 else
+ 						state=S2;	
+						
+				 endcase 
+		
+		always@ (posedge CLK or  negedge RST)
+			case(state)
+				S0 : Z=0;
+				S1 : Z=1;
+				S2 : Z=0;
+				S3 : Z=1;
+			endcase
+					
+endmodule
+
+module tbDiagram;
+	reg X, CLK, RST;
+	wire Z;	
+	integer i;
+	
+	stateDiagram unit(X, CLK, RST, Z);
+	
+	initial
+		begin		
+		
+		$display("-----------------------STATE DIAGRAM-----------------------");	
+		$display(" ");
+
+		$monitor("Time %0d  X=%b  CLK=%b  RST=%b  Z=%b",$time, X, CLK, RST, Z);
+
+		#0 X=1'b0; CLK=1'b1; RST=1'b0;
+		#10 X=1'b0; CLK=1'b0; RST=1'b1;
+		for(i=0; i<30; i=i+1)
+			begin
+				
+				#5 X=~X;
+				#10 CLK=~CLK;
+				
+			end	
+		
+		
+			
+			
+		
+		$display(" ");
+		$display("-----------------------END OF TESTBENCH-----------------------");
+		
+		end
+	
+endmodule
+		
+module DFF(D, CLK, RST, Y, YP);
+	input D, CLK, RST;
+	output reg Y, YP;
+
+	
+	always@ (posedge CLK or negedge RST)
+		begin  
+			if(~RST)
+				begin
+				Y=1'b0;
+				YP=~Y;
+				end
+			else
+				begin
+				Y=D;
+				YP=~Y;
+				end
+		end
+endmodule
+
+module firstFig(X, CLK, RST, A, AP, B, BP, Z);
+	input X, CLK, RST;
+	output A, B;
+	output Z;
+	output AP, BP;
+	wire wa, wb;
+	
+	assign AP=~A;
+	assign BP=~B;  
+	
+	xor u1(wa, X, BP);
+	or u2(wb, X, A);
+	DFF u3(wa, CLK, RST, A);
+	DFF u4(wb, CLK, RST, B);  
+	xor u5(Z, A, B);
+	
+endmodule
+
+module tbfirstFig;
+	reg X, CLK, RST;
+	wire A, AP, B, BP, Z;	
+	integer i;
+	
+	firstFig unit(X, CLK, RST, A, AP, B, BP, Z);
+	
+	initial
+		begin		
+		
+		$display("-----------------------FIGURE1-----------------------");	
+		$display(" ");
+		
+		
+		$monitor("Time %0d  X=%b  CLK=%b  RST=%b  A=%b  AP=%b  B=%b  BP=%b  Z=%b",$time, X, CLK, RST, A, AP, B, BP, Z);
+
+		
+		#0 X=0; CLK=0; RST=0; 
+		#10 X=0; CLK=0; RST=1;
+		#10 CLK=1;	
+		#10 CLK=0;
+		#10 X=0; CLK=1;
+		#5 X=1; CLK=0;
+		#5 CLK=1;
+		
+			
+		
+		$display(" ");
+		$display("-----------------------END OF TESTBENCH-----------------------");
+		
+		end
+	
+endmodule
+
+
+module secondFig(X, CLK, RST, A, AP, B, BP, Z);
+	input X, CLK, RST;
+	output A, B;
+	output Z;
+	output AP, BP;
+	wire wa, wb;
+	
+	assign AP=~A;
+	assign BP=~B;  
+	
+	xor u1(wa, X, BP);
+	xor u2(wb, X, A);
+	DFF u3(wa, CLK, RST, A);
+	DFF u4(wb, CLK, RST, B);  
+	xor u5(Z, A, B);
+	
+endmodule  
+
+module tbsecondFig;
+	reg X, CLK, RST;
+	wire A, AP, B, BP, Z;	
+	integer i;
+	
+	secondFig unit(X, CLK, RST, A, AP, B, BP, Z);
+	
+	initial
+		begin		
+		
+		$display("-----------------------FIGURE1-----------------------");	
+		$display(" ");
+		
+		
+		$monitor("Time %0d  X=%b  CLK=%b  RST=%b  A=%b  AP=%b  B=%b  BP=%b  Z=%b",$time, X, CLK, RST, A, AP, B, BP, Z);
+
+		
+		#0 X=0; CLK=0; RST=0; 
+		#10 X=0; CLK=0; RST=1;
+		#10 CLK=1;	
+		#10 CLK=0;
+		#10 X=0; CLK=1;
+		#5 X=1; CLK=0;
+		#5 CLK=1;
+		
+			
+		
+		$display(" ");
+		$display("-----------------------END OF TESTBENCH-----------------------");
+		
+		end
+	
+endmodule
+
+
+module tb1;	
+	reg X, CLK, RST;
+	wire A, AP, B, BP, Z1, Z2;
+	
+	firstFig unit1(X, CLK, RST, A, AP, B, BP, Z1); //firstFig
+	stateDiagram unit2(X, CLK, RST, Z2); //stateDiagram
+	
+	
+	initial begin 
+	$monitor("Time %0d  X=%b  CLK=%b  RST=%b  Z1=%b  Z2=%b",$time, X, CLK, RST, Z1, Z2);
+		//to prove it is pass for all possible values
+		#0 X=0; CLK=0; RST=0; 
+		#10 RST=1; 
+		
+		if(Z1==Z2)
+			$display("\n-----------------------PASS-----------------------\n");
+		else
+			$display("\n-----------------------FAIL-----------------------\n");
+		
+		
+		repeat(30)
+		begin 
+			
+		   	#5 CLK=~CLK;
+		   	#10 X=~X;
+		
+		if(Z1==Z2)
+			$display("\n-----------------------PASS-----------------------\n");
+		else
+			$display("\n-----------------------FAIL-----------------------\n");
+	
+		 end
+
+	end
+	
+	
+endmodule 
+
+module tb2;	
+	reg X, CLK, RST;
+	wire A, AP, B, BP, Z1, Z2;	  
+
+	
+	secondFig unit1(X, CLK, RST, A, AP, B, BP, Z1);
+	stateDiagram unit2(X, CLK, RST, Z2);
+	
+	
+	initial begin 
+	$monitor("Time %0d  X=%b  CLK=%b  RST=%b  Z1=%b  Z2=%b",$time, X, CLK, RST, Z1, Z2);
+	//counter example to prove its not the same as Figure 1
+		#0 X=0; CLK=0; RST=0; 
+		#10 X=0; CLK=0; RST=1;
+		#10 CLK=1;	
+		#10 CLK=0;
+		#10 X=0; CLK=1;
+		#5 X=1; CLK=0;
+		#5 CLK=1;
+		#5 RST=0;
+	
+	if(Z1==Z2)
+		$display("\n-----------------------PASS-----------------------\n");
+	else
+		$display("\n-----------------------FAIL-----------------------\n");
+		
+	
+	end
+	
+	
+endmodule
